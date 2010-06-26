@@ -1,6 +1,6 @@
 --- #YAML:1.0
 name:               Search-OpenSearch-Server
-version:            0.03
+version:            0.04
 abstract:           serve OpenSearch results
 author:
     - Peter Karman <karman@cpan.org>
@@ -11,6 +11,7 @@ configure_requires:
 build_requires:
     ExtUtils::MakeMaker:  0
 requires:
+    JSON::XS:            0
     Plack:               0
     Search::OpenSearch:  0
     Test::More:          0
