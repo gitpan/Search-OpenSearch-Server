@@ -7,8 +7,10 @@ use Carp;
 use Search::OpenSearch;
 use Plack::Request;
 use Plack::Util::Accessor qw( engine engine_config );
+use Data::Dump qw( dump );
+use JSON;
 
-our $VERSION = '0.04';
+our $VERSION = '0.05';
 
 my %formats = (
     'XML'  => 'application/xml',
@@ -41,8 +43,25 @@ sub setup_engine {
 
 sub call {
     my ( $self, $env ) = @_;
-    my $req = Plack::Request->new($env);
-    return $self->do_search($req);
+    my $req  = Plack::Request->new($env);
+    my $path = $req->path;
+    if ( $req->method eq 'GET' and length $path == 1 ) {
+        return $self->do_search($req);
+    }
+    elsif ( $req->method eq 'GET'
+        and $self->engine->has_rest_api )
+    {
+        return $self->do_rest_api($req);
+    }
+    if ( !$self->engine->has_rest_api && $req->method eq 'POST' ) {
+        return $self->do_search($req);
+    }
+    elsif ( $self->engine->has_rest_api ) {
+        return $self->do_rest_api($req);
+    }
+    else {
+        return $self->handle_no_query( $req->new_response )->finalize();
+    }
 }
 
 sub handle_no_query {
@@ -97,6 +116,72 @@ sub do_search {
             $response->body("$search_response");
         }
 
+    }
+
+    return $response->finalize();
+}
+
+# only supports JSON for now.
+sub do_rest_api {
+    my ( $self, $req ) = @_;
+
+    my %args     = ();
+    my $params   = $req->parameters;
+    my $response = $req->new_response;
+    my $method   = $req->method;
+
+    my $engine = $self->engine;
+    if ( !$engine->can($method) ) {
+        $response->status(415);
+        $response->body(
+            encode_json(
+                { success => 0, msg => "Unsupported method: $method" }
+            )
+        );
+    }
+    else {
+
+        #warn "method==$method";
+        my $doc = {
+            url     => $req->path,
+            content => $req->content,
+            type    => $req->content_type,
+            size    => $req->content_length
+        };
+        $doc->{url} =~ s,^/,,;    # strip leading /
+
+        #dump $doc;
+
+        if ( $doc->{url} eq '/' or $doc->{url} eq "" ) {
+
+            #warn "invalid url";
+            $response->status(400);
+            $response->body(
+                encode_json(
+                    {   success => 0,
+                        msg     => "Invalid or missing document URI",
+                    }
+                )
+            );
+        }
+        else {
+            my $arg = $doc;
+            if ( $method eq 'GET' or $method eq 'DELETE' ) {
+                $arg = $doc->{url};
+            }
+            my $rest = $engine->$method($arg);
+            if ( $rest->{code} =~ m/^2/ ) {
+                $rest->{success} = 1;
+            }
+            else {
+                $rest->{success} = 0;
+            }
+            $response->status( $rest->{code} );
+            $response->content_type( $formats{'JSON'} );
+            $response->body( encode_json($rest) );
+
+            #dump($response);
+        }
     }
 
     return $response->finalize();
@@ -167,6 +252,11 @@ The meat of the application. This method checks params in I<request>,
 mapping them to the Search::OpenSearch::Engine API.
 
 Returns a Plack::Reponse, finalize()d.
+
+=head2 do_rest_api( I<request> )
+
+If the Engine used supports has_rest_api(), this method calls
+the appropriate HTTP method on the Engine object.
 
 =head2 handle_no_query( I<response> )
 
