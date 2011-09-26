@@ -1,6 +1,6 @@
 --- #YAML:1.0
 name:               Search-OpenSearch-Server
-version:            0.05
+version:            0.06
 abstract:           serve OpenSearch results
 author:
     - Peter Karman <karman@cpan.org>
