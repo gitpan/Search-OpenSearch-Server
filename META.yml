@@ -1,6 +1,6 @@
 --- #YAML:1.0
 name:               Search-OpenSearch-Server
-version:            0.08
+version:            0.09
 abstract:           serve OpenSearch results
 author:
     - Peter Karman <karman@cpan.org>
@@ -14,7 +14,7 @@ requires:
     JSON::XS:            0
     perl:                5.008003
     Plack:               0
-    Search::OpenSearch:  0.11
+    Search::OpenSearch:  0.15
     Test::More:          0
 resources:
     bugtracker:  http://rt.cpan.org/NoAuth/Bugs.html?Dist=Search-OpenSearch-Server

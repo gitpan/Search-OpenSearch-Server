@@ -10,7 +10,7 @@ use Plack::Util::Accessor qw( engine engine_config );
 use Data::Dump qw( dump );
 use JSON;
 
-our $VERSION = '0.08';
+our $VERSION = '0.09';
 
 my %formats = (
     'XML'  => 'application/xml',
@@ -82,7 +82,7 @@ sub do_search {
         $response = $self->handle_no_query($response);
     }
     else {
-        for my $param (qw( b q s o p h c L f format )) {
+        for my $param (qw( b q s o p h c L f format u t )) {
             $args{$param} = $params->{$param};
         }
 
@@ -94,7 +94,7 @@ sub do_search {
             $args{'p'} = $params->{limit};
         }
 
-        $args{format} = uc( $args{format} || 'JSON' );
+        $args{format} = uc( $args{'t'} || $args{format} || 'JSON' );
         if ( !exists $formats{ $args{format} } ) {
 
             # TODO better way to log?
@@ -160,7 +160,7 @@ sub do_rest_api {
         };
         $doc->{url} =~ s,^/,,;    # strip leading /
 
-        if ($req->logger) {
+        if ( $req->logger ) {
             $req->logger->( { level => 'debug', message => dump $doc } );
         }
 
