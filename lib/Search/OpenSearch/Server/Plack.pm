@@ -10,11 +10,12 @@ use Plack::Util::Accessor qw( engine engine_config );
 use Data::Dump qw( dump );
 use JSON;
 
-our $VERSION = '0.10';
+our $VERSION = '0.11';
 
 my %formats = (
-    'XML'  => 'application/xml',
-    'JSON' => 'application/json',
+    'XML'   => 'application/xml',
+    'JSON'  => 'application/json',
+    'ExtJS' => 'application/json',
 );
 
 sub prepare_app {
@@ -35,15 +36,33 @@ sub setup_engine {
         #warn "[$$] engine created";
 
         $self->engine(
-            Search::OpenSearch->engine( %{ $self->engine_config } ) );
+            Search::OpenSearch->engine(
+                logger => $self,
+                %{ $self->engine_config },
+            )
+        );
         return 1;
     }
     croak "engine() or engine_config() required";
 }
 
+sub log {
+    my $self = shift;
+    my $req  = $self->{_this_req};
+    if ( $req->can('logger') and $req->logger ) {
+        for (@_) {
+            $req->logger->( { level => 'debug', message => $_ } );
+        }
+    }
+}
+
 sub call {
     my ( $self, $env ) = @_;
-    my $req  = Plack::Request->new($env);
+    my $req = Plack::Request->new($env);
+
+    # stash this request object for log() to work
+    $self->{_this_req} = $req;
+
     my $path = $req->path;
     if ( $req->method eq 'GET' and length $path == 1 ) {
         return $self->do_search($req);
@@ -82,7 +101,7 @@ sub do_search {
         $response = $self->handle_no_query($response);
     }
     else {
-        for my $param (qw( b q s o p h c L f format u t )) {
+        for my $param (qw( b q s o p h c L f format u t r )) {
             $args{$param} = $params->{$param};
         }
 
@@ -96,9 +115,7 @@ sub do_search {
 
         $args{format} = uc( $args{'t'} || $args{format} || 'JSON' );
         if ( !exists $formats{ $args{format} } ) {
-
-            # TODO better way to log?
-            warn "bad format $args{format} -- using JSON\n";
+            $self->log("bad format $args{format} -- using JSON");
             $args{format} = 'JSON';
         }
 
@@ -132,10 +149,13 @@ sub do_rest_api {
 
     my $engine = $self->engine;
     if ( !$engine->can($method) ) {
-        $response->status(415);
+        $response->status(405);
+        $response->header( 'Allow' => 'GET, POST, PUT, DELETE' );
         $response->body(
             encode_json(
-                { success => 0, msg => "Unsupported method: $method" }
+                {   success => 0,
+                    msg     => "Unsupported method: $method",
+                }
             )
         );
     }
@@ -160,9 +180,7 @@ sub do_rest_api {
         };
         $doc->{url} =~ s,^/,,;    # strip leading /
 
-        if ( $req->can('logger') and $req->logger ) {
-            $req->logger->( { level => 'debug', message => dump $doc } );
-        }
+        $self->log( dump $doc );
 
         #warn dump $doc;
 
@@ -254,6 +272,11 @@ This module implements a HTTP-ready L<Search::OpenSearch> server using L<Plack>.
 
 Implements the required Middleware method. The default behavior is to
 instantiate a L<Plack::Request> and pass it into do_search().
+
+=head2 log( I<msg> )
+
+Passes I<msg> on to the Plack::Request->logger object, if any.
+The logger level is hardcoded at 'debug'.
 
 =head2 prepare_app
 
