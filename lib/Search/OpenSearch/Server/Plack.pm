@@ -9,13 +9,13 @@ use Plack::Request;
 use Plack::Util::Accessor qw( engine engine_config );
 use Data::Dump qw( dump );
 use JSON;
+use Scalar::Util qw( weaken );
 
-our $VERSION = '0.11';
+our $VERSION = '0.12';
 
 my %formats = (
-    'XML'   => 'application/xml',
-    'JSON'  => 'application/json',
-    'ExtJS' => 'application/json',
+    'XML'  => 1,
+    'JSON' => 1,
 );
 
 sub prepare_app {
@@ -62,6 +62,7 @@ sub call {
 
     # stash this request object for log() to work
     $self->{_this_req} = $req;
+    weaken( $self->{_this_req} );
 
     my $path = $req->path;
     if ( $req->method eq 'GET' and length $path == 1 ) {
@@ -129,7 +130,7 @@ sub do_search {
         else {
             $search_response->debug(1) if $params->{debug};
             $response->status(200);
-            $response->content_type( $formats{ $args{format} } );
+            $response->content_type( $search_response->content_type );
             $response->body("$search_response");
         }
 
@@ -213,7 +214,8 @@ sub do_rest_api {
                 $rest->{success} = 0;
             }
             $response->status( $rest->{code} );
-            $response->content_type( $formats{'JSON'} );
+            $response->content_type(
+                Search::OpenSearch::Response::JSON->content_type );
             $response->body( encode_json($rest) );
 
             #dump($response);
