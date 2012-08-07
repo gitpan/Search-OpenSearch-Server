@@ -6,16 +6,18 @@ use base qw( Plack::Middleware );
 use Carp;
 use Search::OpenSearch;
 use Plack::Request;
-use Plack::Util::Accessor qw( engine engine_config );
+use Plack::Util::Accessor qw( engine engine_config stats_logger );
 use Data::Dump qw( dump );
 use JSON;
 use Scalar::Util qw( weaken );
+use Time::HiRes qw( time );
 
-our $VERSION = '0.12';
+our $VERSION = '0.13';
 
 my %formats = (
-    'XML'  => 1,
-    'JSON' => 1,
+    'XML'   => 1,
+    'JSON'  => 1,
+    'ExtJS' => 1,
 );
 
 sub prepare_app {
@@ -114,18 +116,49 @@ sub do_search {
             $args{'p'} = $params->{limit};
         }
 
-        $args{format} = uc( $args{'t'} || $args{format} || 'JSON' );
-        if ( !exists $formats{ $args{format} } ) {
-            $self->log("bad format $args{format} -- using JSON");
+        $args{t} ||= $args{format} || 'JSON';
+        if ( !exists $formats{ $args{t} } ) {
+            $self->log("bad format $args{t} -- using JSON");
             $args{format} = 'JSON';
         }
 
-        my $search_response = $self->engine->search(%args);
+        my $search_response;
+        eval {
+            $search_response = $self->engine->search(%args);
 
-        if ( !$search_response ) {
+            if ( $self->stats_logger ) {
+                $self->stats_logger->log( $req, $search_response );
+            }
+        };
+
+        my $errmsg;
+        if ( $@ or ( $search_response and $search_response->error ) ) {
+            $errmsg = "$@";
+            if ( !$errmsg and $search_response and $search_response->error ) {
+                $errmsg = $search_response->error;
+            }
+            elsif ( !$errmsg and $self->engine->error ) {
+                $errmsg = $self->engine->error;
+            }
+
+            # log it
+            if ( $req->can('logger') and $req->logger ) {
+                $req->logger->( { level => 'error', message => $errmsg } );
+            }
+
+            # trim the return to hide file and linenum
+            $errmsg =~ s/ at \/[\w\/\.]+ line \d+\.?.*$//s;
+
+            # clear errors
+            $self->engine->error(undef);
+            $search_response->error(undef);
+        }
+
+        if ( !$search_response or $errmsg ) {
+            $errmsg ||= 'Internal error';
             $response->status(500);
-            $response->content_type('text/plain');
-            $response->body("Internal error");
+            $response->content_type('application/json');
+            $response->body(qq/{success:0, error:"$errmsg"}/);
         }
         else {
             $search_response->debug(1) if $params->{debug};
@@ -143,10 +176,11 @@ sub do_search {
 sub do_rest_api {
     my ( $self, $req ) = @_;
 
-    my %args     = ();
-    my $params   = $req->parameters;
-    my $response = $req->new_response;
-    my $method   = $req->method;
+    my $start_time = time();
+    my %args       = ();
+    my $params     = $req->parameters;
+    my $response   = $req->new_response;
+    my $method     = $req->method;
 
     my $engine = $self->engine;
     if ( !$engine->can($method) ) {
@@ -206,6 +240,13 @@ sub do_rest_api {
             # call the REST method
             my $rest = $engine->$method($arg);
 
+            my $build_time = sprintf( "%0.5f", time() - $start_time );
+            $rest->{build_time} = $build_time;
+
+            if ( $self->stats_logger ) {
+                $self->stats_logger->log( $req, $rest );
+            }
+
             # set up the response
             if ( $rest->{code} =~ m/^2/ ) {
                 $rest->{success} = 1;
@@ -252,7 +293,8 @@ Search::OpenSearch::Server::Plack - serve OpenSearch results with Plack
  };
 
  my $app = Search::OpenSearch::Server::Plack->new( 
-    engine_config => $engine_config
+    engine_config => $engine_config,
+    stats_logger  => MyStats->new(),
  );
 
  builder {
@@ -269,6 +311,30 @@ Search::OpenSearch::Server::Plack is a L<Plack::Middleware> application.
 This module implements a HTTP-ready L<Search::OpenSearch> server using L<Plack>.
 
 =head1 METHODS
+
+=head2 new( I<params> )
+
+Inherits from Plack::Middleware. I<params> can be:
+
+=over
+
+=item engine
+
+A Search::OpenSearch::Engine instance. Either this or B<engine_config> is required.
+
+=item engine_config
+
+A hashref passed to the Search::OpenSearch->engine method.
+Either this or B<engine> is required.
+
+=item stats_logger
+
+An object that implements at least one method called B<log>. The object's
+B<log> method is invoked with 2 arguments: the Plack::Request object,
+and either the Search::OpenSearch::Response object or the REST response
+hashref, on each request.
+
+=back
 
 =head2 call
 

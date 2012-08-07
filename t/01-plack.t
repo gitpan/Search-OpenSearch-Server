@@ -1,24 +1,42 @@
 #!/usr/bin/env perl
 use strict;
 use warnings;
-use Test::More tests => 13;
+use Test::More tests => 17;
 use Data::Dump qw( dump );
 use JSON;
+
+{
+
+    package MyStats;
+
+    sub new {
+        return bless {}, shift;
+    }
+
+    sub log {
+        my ( $self, $req, $resp ) = @_;
+        Test::More::ok( ref $resp, "response is a ref" );
+
+        #Test::More::diag( Data::Dump::dump $resp );
+
+    }
+
+}
 
 SKIP: {
 
     my $index_path = $ENV{OPENSEARCH_INDEX};
     if ( !defined $index_path or !-d $index_path ) {
         diag("set OPENSEARCH_INDEX to valid path to test Plack with Lucy");
-        skip "set OPENSEARCH_INDEX to valid path to test Plack with Lucy", 13;
+        skip "set OPENSEARCH_INDEX to valid path to test Plack with Lucy", 17;
     }
     eval "use Plack::Test";
     if ($@) {
-        skip "Plack::Test not available", 13;
+        skip "Plack::Test not available", 17;
     }
     eval "use Search::OpenSearch::Engine::Lucy";
     if ($@) {
-        skip "Search::OpenSearch::Engine::Lucy not available", 13;
+        skip "Search::OpenSearch::Engine::Lucy not available", 17;
     }
 
     require Search::OpenSearch::Server::Plack;
@@ -30,7 +48,8 @@ SKIP: {
             index  => [$index_path],
             facets => { names => [qw( topics people places orgs author )], },
             fields => [qw( topics people places orgs author )],
-        }
+        },
+        stats_logger => MyStats->new(),
     );
 
     test_psgi(
