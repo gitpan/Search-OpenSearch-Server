@@ -10,7 +10,7 @@ use Data::Dump qw( dump );
 use JSON;
 use Time::HiRes qw( time );
 
-our $VERSION = '0.16';
+our $VERSION = '0.17';
 
 my %formats = (
     'XML'   => 1,
@@ -113,7 +113,7 @@ sub do_search {
     return $response;
 }
 
-# only supports JSON for now.
+# only supports JSON responses for now.
 sub do_rest_api {
     my $self     = shift;
     my $request  = shift or croak "request required";
@@ -129,9 +129,13 @@ sub do_rest_api {
         croak "engine() is undefined";
     }
 
-    if ( !$engine->can($method) ) {
+    my @allowed_methods = $engine->get_allowed_http_methods();
+
+    if (   !$engine->can($method)
+        or !grep { $_ eq $method } @allowed_methods )
+    {
         $response->status(405);
-        $response->header( 'Allow' => 'GET, POST, PUT, DELETE' );
+        $response->header( 'Allow' => join( ', ', @allowed_methods ) );
         $response->body(
             Search::OpenSearch::Result->new(
                 {   success => 0,
@@ -170,7 +174,10 @@ sub do_rest_api {
 
         #warn dump $doc;
 
-        if ( $doc->{url} eq '/' or $doc->{url} eq "" ) {
+        if (    ( $doc->{url} eq '/' or $doc->{url} eq "" )
+            and $method ne "COMMIT"
+            and $method ne "ROLLBACK" )
+        {
 
             #warn "invalid url";
             $response->status(400);
