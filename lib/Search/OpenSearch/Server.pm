@@ -10,7 +10,7 @@ use Data::Dump qw( dump );
 use JSON;
 use Time::HiRes qw( time );
 
-our $VERSION = '0.17';
+our $VERSION = '0.18';
 
 my %formats = (
     'XML'   => 1,
@@ -87,7 +87,7 @@ sub do_search {
             $self->log( $errmsg, 'error' );
 
             # trim the return to hide file and linenum
-            $errmsg =~ s/ at \/[\w\/\.]+ line \d+\.?.*$//s;
+            $errmsg =~ s/ at [\w\/\.]+ line \d+\.?.*$//s;
 
             # clear errors
             $self->engine->error(undef) if $self->engine;
