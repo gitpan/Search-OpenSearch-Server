@@ -10,7 +10,7 @@ use Data::Dump qw( dump );
 use JSON;
 use Time::HiRes qw( time );
 
-our $VERSION = '0.21';
+our $VERSION = '0.22';
 
 my %formats = (
     'XML'   => 1,
@@ -186,6 +186,16 @@ sub do_rest_api {
     else {
 
         #warn "method==$method";
+        my $body;
+        if ( $request->can('content') ) {
+            $body = $request->content;
+        }
+        elsif ( $request->can('body') ) {
+            $body = $request->body;
+        }
+        else {
+            croak "\$request does not implement a body() or content() method";
+        }
 
         # defer to explicit headers over implicit values
         my $doc = {
@@ -194,7 +204,7 @@ sub do_rest_api {
             ),
             modtime =>
                 ( $request->header('X-SOS-Last-Modified') || CORE::time() ),
-            content => $request->content,
+            content => $body,
             type    => (
                        $request->header('X-SOS-Content-Type')
                     || $request->content_type

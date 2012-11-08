@@ -1,47 +1,6 @@
-package Search::OpenSearch::Result;
+package CatalystX::Controller::OpenSearch;
 use strict;
-use warnings;
-use JSON;
-use Plack::Util::Accessor qw(
-    build_time
-    search_time
-    doc
-    code
-    success
-    msg
-    total
-);
-use overload
-    '""'     => sub { $_[0]->stringify; },
-    'bool'   => sub {1},
-    fallback => 1;
-
-our $VERSION = '0.22';
-
-sub new {
-    my $proto = shift;
-    my $class = ref $proto || $proto;
-
-    my $self;
-    if ( @_ == 1 && ref $_[0] eq 'HASH' ) {
-        $self = bless { %{ $_[0] } }, $class;
-    }
-    else {
-        $self = bless {@_}, $class;
-    }
-
-    $self;
-}
-
-sub stringify {
-    my $self = shift;
-
-    #Data::Dump::dump($self);
-    my $json = encode_json( {%$self} );
-
-    #warn "json=$json";
-    return $json;
-}
+use base qw( Search::OpenSearch::Server::Catalyst );
 
 1;
 
@@ -49,46 +8,17 @@ __END__
 
 =head1 NAME
 
-Search::OpenSearch::Result - REST action response
+CatalystX::Controller::OpenSearch - stub for Search::OpenSearch::Server::Catalyst
 
 =head1 SYNOPSIS
 
- my $server = Search::OpenSearch::Server::Plack->new();
- my $result = $server->do_rest_api( Plack::Request->new( $env ) );
- print $result;
+ package MyApp::Controller::Search;
+ use base qw( CatalystX::Controller::OpenSearch );
+ 1;
 
 =head1 DESCRIPTION
 
-This class is used internally to represent the result of a REST
-API action.
-
-=head1 METHODS
-
-=head2 new( I<attrs> )
-
-I<attrs> are key/value pairs with keys including:
-
-=over
-
-=item build_time
-
-=item search_time
-
-=item code
-
-=item doc
-
-=item success
-
-=item msg
-
-=item total
-
-=back
-
-=head2 stringify
-
-Returns the object as a JSON-encoded string.
+This class is a stub subclassing L<Search::OpenSearch::Server::Catalyst>.
 
 =head1 AUTHOR
 
@@ -104,7 +34,7 @@ automatically be notified of progress on your bug as I make changes.
 
 You can find documentation for this module with the perldoc command.
 
-    perldoc Search::OpenSearch::Server
+    perldoc Search::OpenSearch::Server::Catalyst
 
 
 You can also look for information at:
