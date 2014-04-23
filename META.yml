@@ -8,7 +8,7 @@ configure_requires:
   ExtUtils::MakeMaker: 6.59
 distribution_type: module
 dynamic_config: 1
-generated_by: 'Module::Install version 1.06'
+generated_by: 'Module::Install version 1.08'
 license: http://dev.perl.org/licenses/
 meta-spec:
   url: http://module-build.sourceforge.net/META-spec-v1.4.html
@@ -18,10 +18,13 @@ no_index:
   directory:
     - inc
     - t
+recommends:
+  Catalyst::Action::RenderView: 0
+  Catalyst::Runtime: 0
 requires:
   JSON: 0
   Plack: 0
-  Search::OpenSearch: 0.24
+  Search::OpenSearch: 0.399_03
   Test::More: 0
   Try::Tiny: 0
   perl: 5.8.3
@@ -30,4 +33,4 @@ resources:
   homepage: https://github.com/karpet/search-opensearch-server
   license: http://opensource.org/licenses/gpl-license.php
   repository: http://github.com/karpet/search-opensearch-server
-version: 0.28
+version: 0.299_01
