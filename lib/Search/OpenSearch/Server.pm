@@ -10,7 +10,7 @@ use Time::HiRes qw( time );
 use Scalar::Util qw( blessed );
 use Try::Tiny;
 
-our $VERSION = '0.299_01';
+our $VERSION = '0.299_02';
 
 has 'engine' => (
     is      => 'rw',
@@ -36,6 +36,9 @@ sub init_engine {
         %{ $self->engine_config },
     );
 }
+
+# no-op for back-compat
+sub setup_engine { }
 
 my %formats = (
     'XML'   => 1,
@@ -432,6 +435,10 @@ Will return the I<response> object.
 =head2 log( I<msg> [, <level ] )
 
 Utility method. Default is to warn(I<msg>).
+
+=head2 setup_engine
+
+A no-op for backwards compatability for pre-Moose version of this class.
  
 =head1 AUTHOR
 

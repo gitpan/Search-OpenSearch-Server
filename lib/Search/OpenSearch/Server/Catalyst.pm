@@ -4,8 +4,9 @@ use Carp;
 use Data::Dump qw( dump );
 use MRO::Compat;
 use mro 'c3';
+use namespace::autoclean;
 
-our $VERSION = '0.299_01';
+our $VERSION = '0.299_02';
 
 sub log {
     my $self = shift;

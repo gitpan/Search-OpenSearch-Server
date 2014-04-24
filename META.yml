@@ -33,4 +33,4 @@ resources:
   homepage: https://github.com/karpet/search-opensearch-server
   license: http://opensource.org/licenses/gpl-license.php
   repository: http://github.com/karpet/search-opensearch-server
-version: 0.299_01
+version: 0.299_02
