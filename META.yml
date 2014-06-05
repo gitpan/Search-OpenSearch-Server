@@ -23,6 +23,7 @@ recommends:
   Catalyst::Runtime: 0
 requires:
   JSON: 0
+  Moose: 0
   Plack: 0
   Search::OpenSearch: 0.399_03
   Test::More: 0
@@ -33,4 +34,4 @@ resources:
   homepage: https://github.com/karpet/search-opensearch-server
   license: http://opensource.org/licenses/gpl-license.php
   repository: http://github.com/karpet/search-opensearch-server
-version: 0.299_02
+version: 0.299_03
